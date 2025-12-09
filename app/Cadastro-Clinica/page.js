@@ -50,7 +50,14 @@ export default function CadastroClinicaPage() {
           'Content-Type': 'application/json',
         },
         // Envia todos os dados que o usuário digitou
-        body: JSON.stringify(formData), 
+       body: JSON.stringify({
+  nomeClinica: formData.clinicaNome,
+  endereco: formData.clinicaEndereco,
+  telefone: formData.clinicaTelefone,
+  email: formData.gestorEmail,
+  senha: formData.gestorPassword
+}),
+ 
       });
 
       const data = await response.json();
@@ -62,10 +69,10 @@ export default function CadastroClinicaPage() {
         setFormData({ /* ... (limpar campos) */ }); 
       } else {
         // Erro da API (ex: email já existe)
-        setMessage(`❌ Erro no cadastro: ${data.message || 'Erro desconhecido.'}`);
+        setMessage(` Erro no cadastro: ${data.message || 'Erro desconhecido.'}`);
       }
     } catch (error) {
-      setMessage('❌ Erro de conexão com o servidor. Tente novamente.');
+      setMessage(' Erro de conexão com o servidor. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +82,7 @@ export default function CadastroClinicaPage() {
   return (
     <div className="p-8 max-w-2xl mx-auto bg-white shadow-lg rounded-lg my-10">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        🏥 Cadastro da sua Clínica
+        Cadastro da sua Clínica
       </h1>
       <p className="mb-6 text-gray-600">
         Preencha os dados da sua clínica e crie a conta do primeiro Gestor.

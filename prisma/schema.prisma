@@ -66,15 +66,16 @@ model Medico {
 model Paciente {
   id              Int      @id @default(autoincrement())
   nome            String
-  email           String?
+  email           String   @unique
+  senha_hash      String
   telefone        String
   data_nascimento DateTime?
   genero          String?
   
   consultas       Consulta[] 
-  
   createdAt       DateTime @default(now())
 }
+
 
 // 6. Serviços Oferecidos
 model Servico {
