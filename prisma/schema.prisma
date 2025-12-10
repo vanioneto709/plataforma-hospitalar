@@ -5,112 +5,123 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url = "file:./dev.bd"
-  }
+  url      = "file:./dev.bd"
+}
 
 // 2. Modelo da Clínica (Multi-Clínica: Ssorrisos e Somar Sorriso)
 model Clinica {
-  id          Int      @id @default(autoincrement()) 
-  nome        String
-  tipo        String?  
-  email       String?
-  telefone    String?
-  endereco    String?
-  logo_url    String?
-  status      Boolean  @default(true) 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  nome      String
+  tipo      String?
+  email     String?
+  telefone  String?
+  endereco  String?
+  logo_url  String?
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relações: Uma clínica tem vários...
-  usuarios    Usuario[]
-  servicos    Servico[]
-  consultas   Consulta[]
+  usuarios  Usuario[]
+  servicos  Servico[]
+  consultas Consulta[]
 }
 
 // 3. Modelo de Usuários (Login: Admin, Secretária, Médico)
 model Usuario {
-  id            Int      @id @default(autoincrement())
-  email         String   @unique
+  id            Int     @id @default(autoincrement())
+  email         String  @unique
   password_hash String // Onde a senha criptografada será salva
   nome          String
-  role          String   // "ADMIN", "GESTOR", "RECEPCAO", "MEDICO"
-  is_active     Boolean  @default(true)
-  
-  // Ligação com a clínica
-  clinicaId     Int?     
-  clinica       Clinica? @relation(fields: [clinicaId], references: [id])
+  role          String // "ADMIN", "GESTOR", "RECEPCAO", "MEDICO"
+  is_active     Boolean @default(true)
 
-  medicoPerfil  Medico?  
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Ligação com a clínica
+  clinicaId Int?
+  clinica   Clinica? @relation(fields: [clinicaId], references: [id])
+
+  medicoPerfil Medico?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // 4. Perfil do Médico (Detalhes específicos)
 model Medico {
-  id              Int      @id @default(autoincrement())
-  crm_registro    String?  
-  especialidade   String?
-  dias_atendimento String? 
-  horario_inicio  String?  
-  horario_fim     String?  
+  id               Int             @id @default(autoincrement())
+  crm_registro     String?
+  especialidade    String?
+  dias_atendimento String?
+  horario_inicio   String?
+  horario_fim      String?
+  horarios         MedicoHorario[]
 
   // Ligação: Este perfil pertence a um Usuário
-  usuarioId       Int      @unique
-  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId Int     @unique
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
-  consultas       Consulta[] 
+  consultas Consulta[]
+}
+
+/// Adicione ao schema.prisma (por exemplo logo após model Medico)
+model MedicoHorario {
+  id         Int      @id @default(autoincrement())
+  medicoId   Int
+  medico     Medico   @relation(fields: [medicoId], references: [id])
+  diaSemana  Int // 0 = Domingo, 1 = Segunda ... 6 = Sábado
+  horaInicio String // "08:00"
+  horaFim    String // "16:00"
+  createdAt  DateTime @default(now())
 }
 
 // 5. Pacientes
 model Paciente {
-  id              Int      @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   nome            String
-  email           String   @unique
+  email           String    @unique
   senha_hash      String
   telefone        String
   data_nascimento DateTime?
   genero          String?
-  
-  consultas       Consulta[] 
-  createdAt       DateTime @default(now())
-}
 
+  consultas Consulta[]
+  createdAt DateTime   @default(now())
+}
 
 // 6. Serviços Oferecidos
 model Servico {
   id              Int     @id @default(autoincrement())
   nome            String
-  duracao_minutos Int     
+  duracao_minutos Int
   preco           Float?
   descricao       String?
   ativo           Boolean @default(true)
 
-  clinicaId       Int
-  clinica         Clinica @relation(fields: [clinicaId], references: [id])
+  clinicaId Int
+  clinica   Clinica @relation(fields: [clinicaId], references: [id])
 
-  consultas       Consulta[]
+  consultas Consulta[]
 }
 
 // 7. Consultas (Agendamentos)
 model Consulta {
-  id              Int      @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   data_hora_inicio DateTime
   data_hora_fim    DateTime
-  status          String   @default("PENDENTE") // PENDENTE, AGENDADA, CONCLUIDA
-  observacoes     String?
+  status           String   @default("PENDENTE") // PENDENTE, AGENDADA, CONCLUIDA
+  observacoes      String?
 
-  clinicaId       Int
-  clinica         Clinica  @relation(fields: [clinicaId], references: [id])
+  clinicaId Int
+  clinica   Clinica @relation(fields: [clinicaId], references: [id])
 
-  pacienteId      Int
-  paciente        Paciente @relation(fields: [pacienteId], references: [id])
+  pacienteId Int
+  paciente   Paciente @relation(fields: [pacienteId], references: [id])
 
-  medicoId        Int?     
-  medico          Medico?  @relation(fields: [medicoId], references: [id])
+  medicoId Int?
+  medico   Medico? @relation(fields: [medicoId], references: [id])
 
-  servicoId       Int
-  servico         Servico  @relation(fields: [servicoId], references: [id])
+  servicoId Int
+  servico   Servico @relation(fields: [servicoId], references: [id])
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 }
