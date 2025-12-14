@@ -81,7 +81,7 @@ export default function HomePage() {
                 
                 {/* CTA 2: Cadastro de Clínica (Gestor) */}
                 <Link 
-                  href="/cadastro-clinica" 
+                  href="/Cadastro-Clinica" 
                   className="inline-block bg-primary hover:bg-blue-700 text-white font-bold text-xl py-3 px-8 rounded-lg shadow-xl transition duration-300 transform hover:scale-105 text-center"
                 >
                   Cadastrar Clínica

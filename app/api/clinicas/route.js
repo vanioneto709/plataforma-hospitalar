@@ -1,82 +1,166 @@
-import { PrismaClient } from '@prisma/client';
-import { NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { writeFile } from "fs/promises";
+import path from "path";
 
 const prisma = new PrismaClient();
 
-// Rota: GET /api/clinicas
+// senha segura: mínimo 8, 1 letra e 1 número
+const senhaValida = (senha) => {
+  return /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(senha);
+};
+
+// =======================
+// GET /api/clinicas
+// =======================
 export async function GET() {
   try {
     const clinicas = await prisma.clinica.findMany({
-      where: { status: 'ativo' },
-      select: { id: true, nome: true, endereco: true, logo_url: true, tipo: true },
-      orderBy: { nome: 'asc' },
+      where: { status: true },
+      select: {
+        id: true,
+        nome: true,
+        endereco: true,
+        logo_url: true,
+      },
+      orderBy: { nome: "asc" },
     });
 
-    return NextResponse.json(clinicas, { status: 200 });
+    return NextResponse.json(clinicas);
   } catch (error) {
-    console.error('Erro ao listar clínicas:', error);
-    return NextResponse.json({ message: 'Erro interno ao buscar clínicas.' }, { status: 500 });
+    console.error(error);
+    return NextResponse.json(
+      { message: "Erro interno ao buscar clínicas." },
+      { status: 500 }
+    );
   }
 }
 
-// Rota: POST /api/clinicas
+// =======================
+// POST /api/clinicas
+// =======================
 export async function POST(req) {
   try {
-    const { nomeClinica, endereco, telefone, email, senha } = await req.json();
+    const data = await req.formData();
+
+    const nomeClinica = data.get("nomeClinica");
+    const endereco = data.get("endereco");
+    const telefone = data.get("telefone");
+    const email = data.get("email");
+    const senha = data.get("senha");
+    const nif = data.get("nif");
+    const localidade = data.get("localidade");
+    const logo = data.get("logo"); // File | null
 
     // Validação básica
-    if (!nomeClinica || !endereco || !telefone || !email || !senha) {
-      return NextResponse.json({ message: 'Todos os campos são obrigatórios.' }, { status: 400 });
+    const obrigatorios = {
+      nomeClinica,
+      endereco,
+      email,
+      senha,
+      nif,
+      localidade,
+    };
+
+    for (const [campo, valor] of Object.entries(obrigatorios)) {
+      if (!valor) {
+        return NextResponse.json(
+          { message: `O campo "${campo}" é obrigatório.` },
+          { status: 400 }
+        );
+      }
     }
 
-    // Validação de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ message: 'Email inválido.' }, { status: 400 });
+    // Validação de senha
+    if (!senhaValida(senha)) {
+      return NextResponse.json(
+        {
+          message:
+            "Senha fraca: mínimo 8 caracteres, com letras e números.",
+        },
+        { status: 400 }
+      );
     }
 
-    // Checar se usuário já existe
-    const existingUser = await prisma.usuario.findUnique({ where: { email } });
-    if (existingUser) {
-      return NextResponse.json({ message: 'Este email já está cadastrado.' }, { status: 409 });
+    // Duplicações
+    if (await prisma.clinica.findUnique({ where: { nome: nomeClinica } })) {
+      return NextResponse.json(
+        { message: "Já existe uma clínica com este nome." },
+        { status: 409 }
+      );
+    }
+
+    if (await prisma.clinica.findUnique({ where: { nif } })) {
+      return NextResponse.json(
+        { message: "Já existe uma clínica com este NIF." },
+        { status: 409 }
+      );
+    }
+
+    if (await prisma.usuario.findUnique({ where: { email } })) {
+      return NextResponse.json(
+        { message: "Já existe um usuário com este email." },
+        { status: 409 }
+      );
+    }
+
+    // Upload da logo (se existir)
+    let logoUrl = null;
+
+    if (logo && typeof logo === "object") {
+      const bytes = await logo.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const fileName = `${Date.now()}-${logo.name}`;
+      const uploadPath = path.join(
+        process.cwd(),
+        "public",
+        "uploads",
+        fileName
+      );
+
+      await writeFile(uploadPath, buffer);
+      logoUrl = `/uploads/${fileName}`;
     }
 
     // Hash da senha
-    const hashedPassword = await bcrypt.hash(senha, 10);
+    const passwordHash = await bcrypt.hash(senha, 10);
 
-    // Criação da clínica + usuário responsável
+    // Criação da clínica + usuário
     const clinica = await prisma.clinica.create({
       data: {
         nome: nomeClinica,
         endereco,
         telefone,
-        status: 'ativo',
+        nif,
+        localidade,
+        status: true,
+        logo_url: logoUrl,
         usuarios: {
           create: {
             email,
-            senha: hashedPassword,
-            papel: 'responsavel',
+            password_hash: passwordHash,
+            nome: email.split("@")[0],
+            role: "responsavel",
           },
         },
       },
       include: { usuarios: true },
     });
 
-    // Retorno seguro
-    return NextResponse.json({
-      message: 'Clínica cadastrada com sucesso',
-      clinica: {
-        id: clinica.id,
-        nome: clinica.nome,
-        endereco: clinica.endereco,
-        telefone: clinica.telefone,
-        usuarios: clinica.usuarios.map(u => ({ id: u.id, email: u.email, papel: u.papel })),
+    return NextResponse.json(
+      {
+        message: `Clínica "${clinica.nome}" cadastrada com sucesso!`,
+        clinica,
       },
-    }, { status: 201 });
-
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('Erro ao cadastrar clínica:', error);
-    return NextResponse.json({ message: 'Erro interno ao cadastrar clínica.' }, { status: 500 });
+    console.error(error);
+    return NextResponse.json(
+      { message: "Erro interno ao cadastrar clínica." },
+      { status: 500 }
+    );
   }
 }

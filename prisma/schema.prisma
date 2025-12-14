@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.bd"
+  url      = "file:./dev.db"
 }
 
 // 2. Modelo da Clínica (Multi-Clínica: Ssorrisos e Somar Sorriso)

@@ -1,136 +1,254 @@
-// app/cadastro-clinica/page.js
-'use client'; // Indica que este componente deve ser renderizado no navegador
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 export default function CadastroClinicaPage() {
-  // Estado (State) para armazenar o que o usuário digita nos campos
   const [formData, setFormData] = useState({
-    clinicaNome: '',
-    clinicaEmail: '',
-    clinicaTelefone: '',
-    clinicaEndereco: '',
-    gestorNome: '',
-    gestorEmail: '',
-    gestorPassword: '',
-    confirmPassword: '', // Apenas para validação no Frontend
+    nomeClinica: "",
+    endereco: "",
+    localidade: "",
+    nif: "",
+    telefone: "",
+    email: "",
+    senha: "",
+    confirmarSenha: "",
   });
 
-  // Estados para feedback visual
-  const [message, setMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [logo, setLogo] = useState(null);
+  const [previewLogo, setPreviewLogo] = useState(null);
+  const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // 1. Função para atualizar o estado sempre que um campo muda
+  const MessageComponent = ({ message }) => {
+    if (!message) return null;
+    return (
+      <div
+        className={`p-4 rounded-xl font-medium mb-6 shadow-md ${
+          message.type === "success"
+            ? "bg-green-50 text-green-700 border-l-4 border-green-500"
+            : "bg-red-50 text-red-700 border-l-4 border-red-500"
+        }`}
+      >
+        {message.text}
+      </div>
+    );
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 2. Função para lidar com o envio do formulário
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    setLogo(file);
+    if (file) {
+      setPreviewLogo(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault(); 
-    
-    // ⚠️ Validação no Frontend: Senhas iguais?
-    if (formData.gestorPassword !== formData.confirmPassword) {
-      setMessage('As senhas não coincidem!');
-      return; // Para a função aqui
+    e.preventDefault();
+
+    if (formData.senha !== formData.confirmarSenha) {
+      setMessage({ type: "error", text: "As senhas não coincidem." });
+      return;
     }
 
-    setIsLoading(true);
-    setMessage('');
+    const sendData = new FormData();
+    sendData.append("nomeClinica", formData.nomeClinica);
+    sendData.append("endereco", formData.endereco);
+    sendData.append("localidade", formData.localidade);
+    sendData.append("nif", formData.nif);
+    sendData.append("telefone", formData.telefone);
+    sendData.append("email", formData.email);
+    sendData.append("senha", formData.senha);
+    if (logo) sendData.append("logo", logo);
+
+    setLoading(true);
+    setMessage(null);
 
     try {
-      // 3. Chamada à API: Enviando os dados para o seu route.js
-      const response = await fetch('/api/cadastro-clinica', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Envia todos os dados que o usuário digitou
-       body: JSON.stringify({
-  nomeClinica: formData.clinicaNome,
-  endereco: formData.clinicaEndereco,
-  telefone: formData.clinicaTelefone,
-  email: formData.gestorEmail,
-  senha: formData.gestorPassword
-}),
- 
+      const res = await fetch("/api/clinicas", {
+        method: "POST",
+        body: sendData,
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (response.ok) {
-        // Sucesso: Limpa o formulário e mostra mensagem
-        setMessage(`✅ ${data.message} Agora você pode acessar a página de login.`);
-        // Reiniciar o formulário após o sucesso
-        setFormData({ /* ... (limpar campos) */ }); 
-      } else {
-        // Erro da API (ex: email já existe)
-        setMessage(` Erro no cadastro: ${data.message || 'Erro desconhecido.'}`);
+      if (!res.ok) {
+        return setMessage({ type: "error", text: data.message });
       }
-    } catch (error) {
-      setMessage(' Erro de conexão com o servidor. Tente novamente.');
-    } finally {
-      setIsLoading(false);
+
+      setMessage({
+        type: "success",
+        text: `Clínica "${formData.nomeClinica}" cadastrada com sucesso!`,
+      });
+
+      setFormData({
+        nomeClinica: "",
+        endereco: "",
+        localidade: "",
+        nif: "",
+        telefone: "",
+        email: "",
+        senha: "",
+        confirmarSenha: "",
+      });
+
+      setLogo(null);
+      setPreviewLogo(null);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: "Erro ao enviar dados para o servidor.",
+      });
     }
+
+    setLoading(false);
   };
-  
-  // 4. Estrutura Visual do Formulário (Com classes CSS simples)
+
   return (
-    <div className="p-8 max-w-2xl mx-auto bg-white shadow-lg rounded-lg my-10">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        Cadastro da sua Clínica
-      </h1>
-      <p className="mb-6 text-gray-600">
-        Preencha os dados da sua clínica e crie a conta do primeiro Gestor.
-      </p>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-50 p-6 font-sans">
+      <div className="max-w-2xl mx-auto bg-white p-8 sm:p-12 rounded-3xl shadow-2xl">
+        <h1 className="text-3xl font-extrabold mb-3 text-center text-indigo-700">
+          Cadastro de Clínica Odontológica
+        </h1>
+        <p className="text-center text-gray-500 mb-10">
+          Registo rápido para começar a agendar.
+        </p>
 
-      {/* Área de Feedback */}
-      {message && (
-        <div className={`p-3 mb-4 rounded ${message.startsWith('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {message}
-        </div>
-      )}
+        <MessageComponent message={message} />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        
-        {/* === SEÇÃO: DADOS DA CLÍNICA === */}
-        <div className="border-b pb-4">
-          <h2 className="text-xl font-semibold mb-4 text-blue-600">Detalhes da Clínica</h2>
-          
-          {/* Inputs de clínica */}
-          <input type="text" name="clinicaNome" placeholder="Nome Completo da Clínica *" value={formData.clinicaNome} onChange={handleChange} required className="p-3 border rounded w-full mb-3" />
-          <input type="email" name="clinicaEmail" placeholder="E-mail da Clínica" value={formData.clinicaEmail} onChange={handleChange} className="p-3 border rounded w-full mb-3" />
-          <input type="text" name="clinicaTelefone" placeholder="Telefone" value={formData.clinicaTelefone} onChange={handleChange} className="p-3 border rounded w-full mb-3" />
-          <input type="text" name="clinicaEndereco" placeholder="Endereço Principal" value={formData.clinicaEndereco} onChange={handleChange} className="p-3 border rounded w-full" />
-        </div>
-
-        {/* === SEÇÃO: DADOS DO GESTOR === */}
-        <div className="pt-4">
-          <h2 className="text-xl font-semibold mb-4 text-blue-600">Detalhes do Gestor/Diretor</h2>
-          
-          {/* Inputs de usuário */}
-          <input type="text" name="gestorNome" placeholder="Seu Nome Completo *" value={formData.gestorNome} onChange={handleChange} required className="p-3 border rounded w-full mb-3" />
-          <input type="email" name="gestorEmail" placeholder="Seu E-mail (Será o login) *" value={formData.gestorEmail} onChange={handleChange} required className="p-3 border rounded w-full mb-3" />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="password" name="gestorPassword" placeholder="Senha *" value={formData.gestorPassword} onChange={handleChange} required className="p-3 border rounded w-full" />
-            <input type="password" name="confirmPassword" placeholder="Confirme a Senha *" value={formData.confirmPassword} onChange={handleChange} required className="p-3 border rounded w-full" />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Nome */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Nome da Clínica *
+            </label>
+            <input
+              name="nomeClinica"
+              value={formData.nomeClinica}
+              onChange={handleChange}
+              className="w-full p-3 border rounded-2xl"
+              required
+            />
           </div>
-        </div>
 
-        {/* === BOTÃO DE ENVIO === */}
-        <button 
-          type="submit" 
-          disabled={isLoading}
-          className={`w-full px-4 py-3 font-bold text-white rounded transition ${isLoading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
-        >
-          {isLoading ? 'Cadastrando...' : 'Concluir Cadastro'}
-        </button>
-      </form>
+          {/* Logo */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Logo da Clínica
+            </label>
+            <input type="file" accept="image/*" onChange={handleLogoChange} />
+            {previewLogo && (
+              <img
+                src={previewLogo}
+                alt="Preview"
+                className="mt-3 h-20 rounded-xl shadow-md"
+              />
+            )}
+          </div>
+
+          {/* Endereço e Localidade */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold">Localidade *</label>
+              <input
+                name="localidade"
+                value={formData.localidade}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-2xl"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold">NIF *</label>
+              <input
+                name="nif"
+                value={formData.nif}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-2xl"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Endereço */}
+          <div>
+            <label className="block text-sm font-semibold">Endereço *</label>
+            <input
+              name="endereco"
+              value={formData.endereco}
+              onChange={handleChange}
+              className="w-full p-3 border rounded-2xl"
+              required
+            />
+          </div>
+
+          {/* Email e Telefone */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold">Email *</label>
+              <input
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-2xl"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold">Telefone</label>
+              <input
+                name="telefone"
+                value={formData.telefone}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-2xl"
+              />
+            </div>
+          </div>
+
+          {/* Senha */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold">Senha *</label>
+              <input
+                type="password"
+                name="senha"
+                value={formData.senha}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-2xl"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold">
+                Confirmar Senha *
+              </label>
+              <input
+                type="password"
+                name="confirmarSenha"
+                value={formData.confirmarSenha}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-2xl"
+                required
+              />
+            </div>
+          </div>
+
+          <button
+            className={`w-full py-3 rounded-2xl text-white font-bold ${
+              loading ? "bg-indigo-300" : "bg-indigo-600 hover:bg-indigo-700"
+            }`}
+            disabled={loading}
+          >
+            {loading ? "Cadastrando..." : "Cadastrar Clínica"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
