@@ -125,3 +125,10 @@ model Consulta {
 
   createdAt DateTime @default(now())
 }
+model SuperAdmin {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}

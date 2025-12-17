@@ -11,13 +11,13 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<string | null>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => { 
     e.preventDefault(); 
     setIsLoading(true);
-    setMessage('');
+    setMessage(null);
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -28,7 +28,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }), 
       });
 
-      const data = await response.json();
+      const data: LoginResponse = await response.json();
 
       if (response.ok) {
         setMessage('✅ Login realizado com sucesso! Redirecionando...');
@@ -53,6 +53,12 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  interface LoginResponse {
+    token: string;
+    user: Record<string, unknown>;
+    message?: string;
+  }
 
   // Estrutura visual (restante do código JSX é o mesmo)
   return (
