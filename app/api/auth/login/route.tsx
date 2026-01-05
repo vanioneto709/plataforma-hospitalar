@@ -6,16 +6,18 @@ const prisma = new PrismaClient();
 
 interface LoginRequestBody {
   email: string;
-  senha: string;
+  password: string;
 }
 
 export async function POST(req: Request) {
   try {
-    const body: LoginRequestBody = await req.json();
-    const { email, senha } = body;
+    const { email, password }: LoginRequestBody = await req.json();
 
-    if (!email || !senha) {
-      return NextResponse.json({ message: "Email e senha são obrigatórios." }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json(
+        { message: "Email e senha são obrigatórios." },
+        { status: 400 }
+      );
     }
 
     const usuario = await prisma.usuario.findUnique({
@@ -24,13 +26,19 @@ export async function POST(req: Request) {
     });
 
     if (!usuario) {
-      return NextResponse.json({ message: "Credenciais inválidas." }, { status: 401 });
+      return NextResponse.json(
+        { message: "Credenciais inválidas." },
+        { status: 401 }
+      );
     }
 
-    const senhaOk = await bcrypt.compare(senha, usuario.password_hash);
+    const senhaOk = await bcrypt.compare(password, usuario.password_hash);
 
     if (!senhaOk) {
-      return NextResponse.json({ message: "Credenciais inválidas." }, { status: 401 });
+      return NextResponse.json(
+        { message: "Credenciais inválidas." },
+        { status: 401 }
+      );
     }
 
     const response = NextResponse.json(
@@ -46,11 +54,19 @@ export async function POST(req: Request) {
       { status: 200 }
     );
 
-    response.cookies.set("session", usuario.id.toString(), { httpOnly: true, path: "/", sameSite: "lax" });
+    response.cookies.set("session", usuario.id.toString(), {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+    });
 
     return response;
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ message: "Erro interno no login." }, { status: 500 });
+    return NextResponse.json(
+      { message: "Erro interno no login." },
+      { status: 500 }
+    );
   }
 }
+
